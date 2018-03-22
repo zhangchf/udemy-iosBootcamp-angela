@@ -34,7 +34,6 @@ class ChangeCityViewController: UIViewController {
         if cityName != nil {
             cityNameChangedDelegate?.onCityNameChanged(newName: cityName!)
         }
-
         //3 dismiss the Change City View Controller to go back to the WeatherViewController
         dismiss(animated: true, completion: nil)
     }

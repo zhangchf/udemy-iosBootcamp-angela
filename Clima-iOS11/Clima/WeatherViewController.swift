@@ -51,9 +51,11 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate, CityNa
         Alamofire.request(WEATHER_URL, method: .get, parameters: newParams).responseJSON {
             response in
             if response.result.isSuccess {
+                ProgressHUD.showSuccess("Get weather succeed")
                 print("Get weather succeed", response)
                 self.updateWeatherData(json: JSON(response.result.value!))
             } else {
+                ProgressHUD.showError(response.error?.localizedDescription)
                 print("Get weather failed", response)
             }
         }
@@ -63,13 +65,19 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate, CityNa
     /***************************************************************/
     //Write the updateWeatherData method here:
     func updateWeatherData(json: JSON) {
-        let cityName = json["name"].string!
-        let temperature = json["main"]["temp"].doubleValue
-        let weatherId = json["weather"]["id"].intValue
-        self.weatherDataModel = WeatherDataModel(cityName: cityName, temperature: Int(temperature), weatherIconName: WeatherDataModel.updateWeatherIcon(condition: weatherId))
-        print(self.weatherDataModel!)
-        
-        updateUIWithWeatherData()
+        print(json)
+        if let cityName = json["name"].string {
+            let temperature = json["main"]["temp"].doubleValue
+            let weatherId = json["weather"]["id"].intValue
+            self.weatherDataModel = WeatherDataModel(cityName: cityName, temperature: Int(temperature), weatherIconName: WeatherDataModel.updateWeatherIcon(condition: weatherId))
+            print(self.weatherDataModel!)
+            
+            updateUIWithWeatherData()
+        } else {
+            print("WeatherDataError")
+            let msg = json["message"].string
+            ProgressHUD.showError(msg)
+        }
     }
     
     //MARK: - UI Updates
