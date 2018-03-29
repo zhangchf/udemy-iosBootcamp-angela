@@ -7,11 +7,12 @@
 //
 
 import UIKit
+import CoreData
 
-class TodoTableViewController: UITableViewController {
-    
-    let todoPlist = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).last!.appendingPathComponent("todos.plist")
-    var todoArray = [TodoItem]()
+class TodoTableViewController_CoreData: UITableViewController {
+
+    var category: CDCategory!
+    var todoArray = [CDTodoItem]()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -21,34 +22,34 @@ class TodoTableViewController: UITableViewController {
 
         // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
         // self.navigationItem.rightBarButtonItem = self.editButtonItem
-        print("todoPlist: \(todoPlist)")
-        print(NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).last)
-        restoreTodos()
+        print(".documentDirectory:", NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).last ?? ".documentDirecotry not found")
+        loadTodos()
     }
-    
-    
+
 
     // MARK: - Persist/Restore todoPlist
     func persistTodos() {
-        let encoder = PropertyListEncoder()
         do {
-            let data = try encoder.encode(todoArray)
-            try data.write(to: todoPlist)
-            print("persist todos")
+            try gPersistentContainerContext.save()
         } catch {
-            print("persist todos failed", error)
+            print("Persist data failed \(error)")
         }
     }
     
-    func restoreTodos() {
-        let decoder = PropertyListDecoder()
-        do {
-            let data = try Data(contentsOf: todoPlist)
-            todoArray = try decoder.decode([TodoItem].self, from: data)
-            print("restore todos")
-        } catch {
-            print("restore todos failed", error)
+    func loadTodos(with request: NSFetchRequest<CDTodoItem> = CDTodoItem.fetchRequest(), predicate: NSPredicate? = nil) {
+        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", category.name!)
+        if let predicate = predicate {
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, predicate])
+        } else {
+            request.predicate = categoryPredicate
         }
+        
+        do {
+            todoArray = try gPersistentContainerContext.fetch(request)
+        } catch {
+            print("load data failed \(error)")
+        }
+        
     }
 
     // MARK: - Table view data source
@@ -83,7 +84,10 @@ class TodoTableViewController: UITableViewController {
         }
         
         let addAction = UIAlertAction(title: "Add", style: .default, handler: { (_) in
-            self.todoArray.append(TodoItem(title: todoTextField!.text!))
+            let item = CDTodoItem(context: gPersistentContainerContext)
+            item.title = todoTextField!.text!
+            item.parentCategory = self.category
+            self.todoArray.append(item)
             self.tableView.reloadData()
             self.persistTodos()
             print("Add new todo")
@@ -91,5 +95,27 @@ class TodoTableViewController: UITableViewController {
         
         alertController.addAction(addAction)
         present(alertController, animated: true, completion: nil)
+    }
+}
+
+extension TodoTableViewController_CoreData: UISearchBarDelegate {
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        print("Searching for \(searchBar.text!)")
+        let request: NSFetchRequest<CDTodoItem> = CDTodoItem.fetchRequest()
+        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        loadTodos(with: request, predicate: predicate)
+        tableView.reloadData()
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchText.count == 0 {
+            loadTodos()
+            tableView.reloadData()
+            // MARK: Don't quite understand, but to close the keyboard here, must use DispatchQueue.main thread.
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+        }
     }
 }
