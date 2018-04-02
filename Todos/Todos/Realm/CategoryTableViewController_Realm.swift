@@ -8,15 +8,17 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class CategoryTableViewController_Realm: SwipeTableViewController {
     
-    let realm = try! Realm()
+    let realm = gRealm
     var categories : Results<RealmCategory>?
 
     override func viewDidLoad() {
         super.viewDidLoad()
         print("Realm file path", realm.configuration.fileURL)
+        tableView.separatorStyle = .none
         loadCategories()
     }
     
@@ -34,12 +36,15 @@ class CategoryTableViewController_Realm: SwipeTableViewController {
         let cell = super.tableView(tableView, cellForRowAt: indexPath)
         
         if let category = categories?[indexPath.row] {
+            cell.backgroundColor = UIColor(hexString: category.cellColor)
             cell.textLabel?.text = category.name
             cell.selectionStyle = .default
         } else {
+            cell.backgroundColor = view.tintColor
             cell.textLabel?.text = "No categories added"
             cell.selectionStyle = .none
         }
+        cell.textLabel?.textColor = ContrastColorOf(cell.backgroundColor!, returnFlat: true)
         return cell
     }
     
@@ -63,6 +68,7 @@ class CategoryTableViewController_Realm: SwipeTableViewController {
         let addAction = UIAlertAction(title: "Add", style: .default) { (_) in
             let category = RealmCategory()
             category.name = nameTextField.text!
+            category.cellColor = UIColor.randomFlat.hexValue()
             
             do {
                 try self.realm.write {

@@ -8,10 +8,13 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class TodoTableViewController_Realm: SwipeTableViewController {
 
-    let realm = try! Realm()
+    @IBOutlet weak var searchBar: UISearchBar!
+    
+    let realm = gRealm
     var category: RealmCategory!
     var todoItems: Results<RealmItem>?
 
@@ -24,7 +27,33 @@ class TodoTableViewController_Realm: SwipeTableViewController {
         // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
         // self.navigationItem.rightBarButtonItem = self.editButtonItem
         print(".documentDirectory:", NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).last ?? ".documentDirecotry not found")
+        tableView.separatorStyle = .none
         loadTodos()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        guard let categoryColor = UIColor(hexString: category.cellColor) else {
+            fatalError("category color doesn't exist")
+        }
+        updateNavBar(with: categoryColor)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        updateNavBar(with: view.tintColor)
+    }
+    
+    // MARK: - Update Nav Bar
+    func updateNavBar(with color: UIColor) {
+        guard let navBar = navigationController?.navigationBar else {
+            fatalError("navigation bar doesn't exist")
+        }
+        
+        navBar.barTintColor = color
+        let fgColor = ContrastColorOf(color, returnFlat: true)
+        navBar.tintColor = fgColor
+        navBar.largeTitleTextAttributes = [NSAttributedStringKey.foregroundColor: fgColor]
+        
+        searchBar.barTintColor = color
     }
 
 
@@ -41,13 +70,21 @@ class TodoTableViewController_Realm: SwipeTableViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = super.tableView(tableView, cellForRowAt: indexPath)
         
+        guard let categoryColor = UIColor(hexString: category.cellColor) else {
+            fatalError("category color doesn't exist")
+        }
+        
         if let todoItem = todoItems?[indexPath.row] {
             cell.textLabel!.text = todoItem.title
             cell.accessoryType = todoItem.done ? UITableViewCellAccessoryType.checkmark : .none
         } else {
+            cell.backgroundColor = UIColor.white
             cell.textLabel!.text = "No items added"
             cell.accessoryType = .none
         }
+        
+        cell.backgroundColor = categoryColor.darken(byPercentage: CGFloat(0.05) * CGFloat(indexPath.row))
+        cell.textLabel!.textColor = ContrastColorOf(cell.backgroundColor!, returnFlat: true)
         return cell
     }
     
