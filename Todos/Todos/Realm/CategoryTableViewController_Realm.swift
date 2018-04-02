@@ -9,7 +9,7 @@
 import UIKit
 import RealmSwift
 
-class CategoryTableViewController_Realm: UITableViewController {
+class CategoryTableViewController_Realm: SwipeTableViewController {
     
     let realm = try! Realm()
     var categories : Results<RealmCategory>?
@@ -31,7 +31,8 @@ class CategoryTableViewController_Realm: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "categoryCell", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        
         if let category = categories?[indexPath.row] {
             cell.textLabel?.text = category.name
             cell.selectionStyle = .default
@@ -83,6 +84,25 @@ class CategoryTableViewController_Realm: UITableViewController {
         if let identifier = segue.identifier, identifier == "showItems", let categories = categories {
             let destinationVC = segue.destination as! TodoTableViewController_Realm
             destinationVC.category = categories[tableView.indexPathForSelectedRow!.row]
+        }
+    }
+    
+    // MARK: - SwipeTableViewController methods to override
+    override func cellIdentifier() -> String {
+        return "categoryCell"
+    }
+    
+    override func onDeleteCell(at indexPath: IndexPath) {
+        if let categoryToDelete = categories?[indexPath.row] {
+            do {
+                try realm.write {
+                    realm.delete(categoryToDelete)
+                }
+                // Don't call reloadData() when use the .Destructive expansiveStyle, because it will try the deletion itself.
+//                tableView.reloadData()
+            } catch {
+                print("Delete category failed")
+            }
         }
     }
 }

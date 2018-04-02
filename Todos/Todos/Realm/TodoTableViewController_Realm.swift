@@ -9,7 +9,7 @@
 import UIKit
 import RealmSwift
 
-class TodoTableViewController_Realm: UITableViewController {
+class TodoTableViewController_Realm: SwipeTableViewController {
 
     let realm = try! Realm()
     var category: RealmCategory!
@@ -39,7 +39,8 @@ class TodoTableViewController_Realm: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "todoItemCell")!
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        
         if let todoItem = todoItems?[indexPath.row] {
             cell.textLabel!.text = todoItem.title
             cell.accessoryType = todoItem.done ? UITableViewCellAccessoryType.checkmark : .none
@@ -93,6 +94,25 @@ class TodoTableViewController_Realm: UITableViewController {
         
         alertController.addAction(addAction)
         present(alertController, animated: true, completion: nil)
+    }
+    
+    // MARK: - SwipeTableViewController methods to override
+    override func cellIdentifier() -> String {
+        return "todoItemCell"
+    }
+    
+    override func onDeleteCell(at indexPath: IndexPath) {
+        if let itemToDelete = todoItems?[indexPath.row] {
+            do {
+                try realm.write {
+                    realm.delete(itemToDelete)
+                }
+                // Don't call reloadData() when use the .Destructive expansiveStyle, because it will try the deletion itself.
+//                tableView.reloadData()
+            } catch {
+                print("Delete item failed")
+            }
+        }
     }
 }
 
